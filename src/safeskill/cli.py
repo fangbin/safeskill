@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import tempfile
 from pathlib import Path
 
 import typer
@@ -9,6 +10,7 @@ from typing_extensions import Annotated
 from safeskill.adapters.input_adapter import InputAdapterService
 from safeskill.analyzers.static_rules import StaticRuleAnalyzer
 from safeskill.github_fetcher import GitHubSkillFetcher
+from safeskill.marketplace_discovery import MarketplaceDiscoveryService
 from safeskill.parsers.skill_manifest_parser import SkillManifestParser
 from safeskill.pipeline.analysis_pipeline import AnalysisPipeline
 from safeskill.pipeline.batch_scan_service import BatchScanService
@@ -30,6 +32,10 @@ def build_default_pipeline() -> AnalysisPipeline:
 
 def build_batch_scan_service() -> BatchScanService:
     return BatchScanService(github_fetcher=GitHubSkillFetcher())
+
+
+def build_marketplace_discovery_service() -> MarketplaceDiscoveryService:
+    return MarketplaceDiscoveryService()
 
 
 def write_output(output_path: str, content: str) -> str:
@@ -69,6 +75,16 @@ def scan_github(repo_url: Annotated[str, typer.Argument()]) -> None:
 @app.command("scan-batch")
 def scan_batch(manifest_path: Annotated[str, typer.Argument()]) -> None:
     report = build_batch_scan_service().scan_manifest(manifest_path)
+    typer.echo(json.dumps(report.model_dump(mode="json"), ensure_ascii=False))
+
+
+@app.command("scan-marketplace")
+def scan_marketplace(manifest_path: Annotated[str, typer.Argument()]) -> None:
+    discovered = build_marketplace_discovery_service().discover(manifest_path)
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as handle:
+        json.dump(discovered, handle, ensure_ascii=False)
+        temp_manifest = handle.name
+    report = build_batch_scan_service().scan_manifest(temp_manifest)
     typer.echo(json.dumps(report.model_dump(mode="json"), ensure_ascii=False))
 
 
