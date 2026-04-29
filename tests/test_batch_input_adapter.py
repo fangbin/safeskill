@@ -28,6 +28,31 @@ def test_load_batch_manifest_returns_multiple_targets(tmp_path: Path) -> None:
 
 
 
+def test_load_batch_manifest_accepts_structured_github_target(tmp_path: Path) -> None:
+    manifest = tmp_path / "batch.json"
+    manifest.write_text(
+        json.dumps(
+            [
+                {
+                    "type": "github",
+                    "source": "https://github.com/example/demo-skill",
+                    "name": "demo-skill",
+                    "platform": "skillsmp",
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    targets = InputAdapterService().load_batch(str(manifest))
+
+    assert [target.source_type for target in targets] == [SourceType.GITHUB]
+    assert targets[0].source == "https://github.com/example/demo-skill"
+    assert targets[0].metadata.name == "demo-skill"
+    assert targets[0].metadata.platform == "skillsmp"
+
+
+
 def test_load_batch_manifest_rejects_non_array_payload(tmp_path: Path) -> None:
     manifest = tmp_path / "batch.json"
     manifest.write_text(json.dumps({"target": "/tmp/foo"}), encoding="utf-8")

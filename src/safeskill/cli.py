@@ -28,6 +28,10 @@ def build_default_pipeline() -> AnalysisPipeline:
     )
 
 
+def build_batch_scan_service() -> BatchScanService:
+    return BatchScanService(github_fetcher=GitHubSkillFetcher())
+
+
 def write_output(output_path: str, content: str) -> str:
     output = Path(output_path).expanduser().resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -64,7 +68,7 @@ def scan_github(repo_url: Annotated[str, typer.Argument()]) -> None:
 
 @app.command("scan-batch")
 def scan_batch(manifest_path: Annotated[str, typer.Argument()]) -> None:
-    report = BatchScanService().scan_manifest(manifest_path)
+    report = build_batch_scan_service().scan_manifest(manifest_path)
     typer.echo(json.dumps(report.model_dump(mode="json"), ensure_ascii=False))
 
 

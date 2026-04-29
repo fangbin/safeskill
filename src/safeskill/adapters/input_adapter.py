@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import List
+from urllib.parse import urlparse
+from typing import Any, List
 
 from safeskill.models.input_target import InputTarget, SourceType, TargetMetadata
 
@@ -39,4 +40,34 @@ class InputAdapterService:
         if not isinstance(payload, list):
             raise ValueError("Batch manifest must contain a JSON array")
 
-        return [self.resolve(str(item)) for item in payload]
+        return [self._resolve_batch_item(item) for item in payload]
+
+    def _resolve_batch_item(self, item: Any) -> InputTarget:
+        if isinstance(item, str):
+            return self.resolve(item)
+        if isinstance(item, dict):
+            return self._resolve_structured_target(item)
+        raise ValueError(f"Unsupported batch item: {item!r}")
+
+    def _resolve_structured_target(self, item: dict[str, Any]) -> InputTarget:
+        target_type = item.get("type")
+        source = item.get("source")
+        if target_type != SourceType.GITHUB.value:
+            raise ValueError(f"Unsupported structured batch target type: {target_type}")
+        if not isinstance(source, str) or not source:
+            raise ValueError("Structured batch target must include a non-empty source")
+
+        parsed = urlparse(source)
+        repo_path = parsed.path.strip("/") or "unknown/unknown"
+        resolved_path = Path("/virtual/github") / repo_path
+        return InputTarget(
+            source_type=SourceType.GITHUB,
+            source=source,
+            resolved_path=resolved_path,
+            metadata=TargetMetadata(
+                name=item.get("name"),
+                author=item.get("author"),
+                platform=item.get("platform"),
+                version=item.get("version"),
+            ),
+        )
