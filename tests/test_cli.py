@@ -10,7 +10,7 @@ def test_inspect_input_outputs_normalized_json_for_directory(tmp_path: Path) -> 
     skill_dir = tmp_path / "demo-skill"
     skill_dir.mkdir()
 
-    result = CliRunner().invoke(app, [str(skill_dir)])
+    result = CliRunner().invoke(app, ["inspect-input", str(skill_dir)])
 
     assert result.exit_code == 0
     assert '"source_type": "local"' in result.stdout
