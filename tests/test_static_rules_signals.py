@@ -24,6 +24,8 @@ def test_analyzer_flags_suspicious_raw_ip_url(tmp_path: Path) -> None:
 
     assert report.findings[0].rule_id == "suspicious-url.raw-ip"
     assert report.findings[0].severity == "medium"
+    assert report.findings[0].category == "network"
+    assert report.findings[0].confidence == "high"
     assert report.findings[0].location == "urls[0]"
 
 
@@ -47,4 +49,6 @@ def test_analyzer_flags_hardcoded_secret_pattern(tmp_path: Path) -> None:
 
     assert report.findings[0].rule_id == "hardcoded-secret.api-key"
     assert report.findings[0].severity == "high"
+    assert report.findings[0].category == "secret"
+    assert report.findings[0].confidence == "medium"
     assert report.findings[0].location == "scripts[0]"
