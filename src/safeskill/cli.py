@@ -78,6 +78,15 @@ def scan_batch(manifest_path: Annotated[str, typer.Argument()]) -> None:
     typer.echo(json.dumps(report.model_dump(mode="json"), ensure_ascii=False))
 
 
+@app.command("discover-marketplace")
+def discover_marketplace(
+    manifest_path: Annotated[str, typer.Argument()],
+    output_path: Annotated[str, typer.Argument()],
+) -> None:
+    discovered = build_marketplace_discovery_service().discover(manifest_path)
+    typer.echo(write_output(output_path, json.dumps(discovered, ensure_ascii=False, indent=2)))
+
+
 @app.command("scan-marketplace")
 def scan_marketplace(manifest_path: Annotated[str, typer.Argument()]) -> None:
     discovered = build_marketplace_discovery_service().discover(manifest_path)
