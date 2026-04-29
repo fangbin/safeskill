@@ -1,16 +1,20 @@
 from __future__ import annotations
 
 import re
+from typing import Union
 
-from safeskill.models.finding import Finding, Severity, StaticAnalysisReport
+from safeskill.models.analysis import AnalysisRequest, AnalysisResult
+from safeskill.models.finding import Finding, Severity
 from safeskill.models.skill_manifest import SkillManifest
 
 
 class StaticRuleAnalyzer:
+    name = "static"
     RAW_IP_URL_PATTERN = re.compile(r"https?://(?:\d{1,3}\.){3}\d{1,3}(?:[:/][^\s]*)?")
     SECRET_PATTERN = re.compile(r"(?:API[_-]?KEY|TOKEN|SECRET)\s*=\s*[\"']?[A-Za-z0-9._-]{6,}[\"']?", re.IGNORECASE)
 
-    def analyze(self, manifest: SkillManifest) -> StaticAnalysisReport:
+    def analyze(self, request: Union[AnalysisRequest, SkillManifest]) -> AnalysisResult:
+        manifest = request.manifest if isinstance(request, AnalysisRequest) else request
         findings = []
 
         for index, script in enumerate(manifest.scripts):
@@ -108,7 +112,7 @@ class StaticRuleAnalyzer:
                     location=f"urls[{index}]",
                 ))
 
-        return StaticAnalysisReport(source_path=manifest.source_path, findings=findings)
+        return AnalysisResult(analyzer_name=self.name, findings=findings)
 
     def _make_finding(
         self,

@@ -22,3 +22,4 @@ def test_scan_outputs_static_findings_json(tmp_path: Path) -> None:
     assert result.exit_code == 0
     assert '"rule_id": "dangerous-command.curl-pipe-bash"' in result.stdout
     assert '"rule_id": "suspicious-url.raw-ip"' in result.stdout
+    assert '"total_findings": 2' in result.stdout

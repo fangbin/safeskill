@@ -8,6 +8,8 @@ from typing_extensions import Annotated
 from safeskill.adapters.input_adapter import InputAdapterService
 from safeskill.analyzers.static_rules import StaticRuleAnalyzer
 from safeskill.parsers.skill_manifest_parser import SkillManifestParser
+from safeskill.pipeline.analysis_pipeline import AnalysisPipeline
+from safeskill.semantic.stub_analyzer import SemanticStubAnalyzer
 
 app = typer.Typer(help="SafeSkill command line interface")
 
@@ -27,5 +29,10 @@ def parse_manifest(target: Annotated[str, typer.Argument()]) -> None:
 @app.command("scan")
 def scan(target: Annotated[str, typer.Argument()]) -> None:
     manifest = SkillManifestParser().parse_path(target)
-    report = StaticRuleAnalyzer().analyze(manifest)
+    report = AnalysisPipeline(
+        analyzers=[
+            StaticRuleAnalyzer(),
+            SemanticStubAnalyzer(),
+        ]
+    ).run(manifest)
     typer.echo(json.dumps(report.model_dump(mode="json"), ensure_ascii=False))
