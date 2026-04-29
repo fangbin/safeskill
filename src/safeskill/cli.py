@@ -11,8 +11,9 @@ from safeskill.analyzers.static_rules import StaticRuleAnalyzer
 from safeskill.parsers.skill_manifest_parser import SkillManifestParser
 from safeskill.pipeline.analysis_pipeline import AnalysisPipeline
 from safeskill.pipeline.batch_scan_service import BatchScanService
-from safeskill.semantic.stub_analyzer import SemanticStubAnalyzer
+from safeskill.renderers_html import HtmlReportRenderer
 from safeskill.renderers_markdown import MarkdownReportRenderer
+from safeskill.semantic.stub_analyzer import SemanticStubAnalyzer
 
 app = typer.Typer(help="SafeSkill command line interface")
 
@@ -24,6 +25,13 @@ def build_default_pipeline() -> AnalysisPipeline:
             SemanticStubAnalyzer(),
         ]
     )
+
+
+def write_output(output_path: str, content: str) -> str:
+    output = Path(output_path).expanduser().resolve()
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(content, encoding="utf-8")
+    return str(output)
 
 
 @app.command("inspect-input")
@@ -59,7 +67,15 @@ def report_markdown(
     manifest = SkillManifestParser().parse_path(target)
     report = build_default_pipeline().run(manifest)
     markdown = MarkdownReportRenderer().render(manifest, report)
-    output = Path(output_path).expanduser().resolve()
-    output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(markdown, encoding="utf-8")
-    typer.echo(str(output))
+    typer.echo(write_output(output_path, markdown))
+
+
+@app.command("report-html")
+def report_html(
+    target: Annotated[str, typer.Argument()],
+    output_path: Annotated[str, typer.Argument()],
+) -> None:
+    manifest = SkillManifestParser().parse_path(target)
+    report = build_default_pipeline().run(manifest)
+    html = HtmlReportRenderer().render(manifest, report)
+    typer.echo(write_output(output_path, html))
