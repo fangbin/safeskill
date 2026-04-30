@@ -11,6 +11,7 @@ from urllib.parse import urljoin
 class MarketplaceDiscoveryService:
     SMITHERY_LISTING_URL = "https://smithery.ai/skills"
     SMITHERY_LINK_PATTERN = re.compile(r'href=["\'](/skills/[^"\'#?]+/[^"\'#?]+)["\']')
+    GITHUB_LINK_PATTERN = re.compile(r'href=["\'](https://github\.com/[^"\'#?\s<>]+(?:/[^"\'#?\s<>]+)*)["\']')
 
     def discover(self, source: str) -> list[dict[str, str]]:
         if source.startswith("http://") or source.startswith("https://"):
@@ -41,15 +42,19 @@ class MarketplaceDiscoveryService:
         seen = set()
         for href in self.SMITHERY_LINK_PATTERN.findall(html):
             full_url = urljoin(self.SMITHERY_LISTING_URL, href)
-            name = href.removeprefix("/skills/")
             if full_url in seen:
                 continue
             seen.add(full_url)
+            detail_html = self._fetch_text(full_url)
+            repo_url = self._extract_github_repo_url(detail_html)
+            if repo_url is None:
+                continue
             discovered.append(
                 {
-                    "marketplace": "smithery",
-                    "name": name,
-                    "marketplace_url": full_url,
+                    "type": "github",
+                    "source": repo_url,
+                    "name": href.removeprefix("/skills/"),
+                    "platform": "smithery",
                 }
             )
         return discovered
@@ -58,6 +63,22 @@ class MarketplaceDiscoveryService:
         request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(request, timeout=20) as response:
             return response.read().decode("utf-8", "ignore")
+
+    def _extract_github_repo_url(self, html: str) -> str | None:
+        repository_section = re.search(
+            r'Repository</span><div[^>]*>\s*<a href=["\'](https://github\.com/[^"\'#?\s<>]+(?:/[^"\'#?\s<>]+)*)["\']',
+            html,
+        )
+        if repository_section is not None:
+            return repository_section.group(1)
+
+        for candidate in self.GITHUB_LINK_PATTERN.findall(html):
+            if candidate.endswith(".png"):
+                continue
+            if candidate.count("/") <= 3:
+                continue
+            return candidate
+        return None
 
     def _normalize_entry(self, item: Any) -> dict[str, str] | None:
         if not isinstance(item, dict):

@@ -43,15 +43,25 @@ def test_discover_marketplace_writes_normalized_batch_manifest(tmp_path: Path) -
 
 
 def test_discover_marketplace_writes_live_smithery_listing_export(tmp_path: Path, monkeypatch) -> None:
-    html = '''
+    listing_html = '''
     <html><body>
       <a href="/skills/anthropics/pdf">anthropics/pdf</a>
       <a href="/skills/github/web-design-reviewer">github/web-design-reviewer</a>
     </body></html>
     '''
+    detail_html = {
+        "https://smithery.ai/skills/anthropics/pdf": '<a href="https://github.com/anthropics/skills/tree/main/skills/pdf">Source</a>',
+        "https://smithery.ai/skills/github/web-design-reviewer": '<a href="https://github.com/example/web-design-reviewer">GitHub</a>',
+    }
 
     discovery = cli_module.build_marketplace_discovery_service()
-    monkeypatch.setattr(discovery, "_fetch_text", lambda url: html)
+
+    def fake_fetch(url: str) -> str:
+        if url == "https://smithery.ai/skills":
+            return listing_html
+        return detail_html[url]
+
+    monkeypatch.setattr(discovery, "_fetch_text", fake_fetch)
     monkeypatch.setattr(cli_module, "build_marketplace_discovery_service", lambda: discovery)
 
     output_file = tmp_path / "smithery-export.json"
@@ -61,13 +71,15 @@ def test_discover_marketplace_writes_live_smithery_listing_export(tmp_path: Path
     payload = json.loads(output_file.read_text(encoding="utf-8"))
     assert payload == [
         {
-            "marketplace": "smithery",
+            "type": "github",
+            "source": "https://github.com/anthropics/skills/tree/main/skills/pdf",
             "name": "anthropics/pdf",
-            "marketplace_url": "https://smithery.ai/skills/anthropics/pdf",
+            "platform": "smithery",
         },
         {
-            "marketplace": "smithery",
+            "type": "github",
+            "source": "https://github.com/example/web-design-reviewer",
             "name": "github/web-design-reviewer",
-            "marketplace_url": "https://smithery.ai/skills/github/web-design-reviewer",
+            "platform": "smithery",
         },
     ]
